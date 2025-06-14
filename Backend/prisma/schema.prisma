@@ -1,0 +1,105 @@
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../src/generated/prisma" can help to genrate the client some where else also 
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//user roles
+enum UserRole {
+  CELEBRITY
+  PUBLIC
+}
+
+enum NotificationType {
+  NEW_POST
+}
+
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  username      String    
+  password      String   
+  role          UserRole  @default(PUBLIC)
+  avatarUrl     String?   
+  bio           String?   
+  isVerified    Boolean   @default(false) // Quick verification badge
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  posts         Post[]
+
+  following     Follow[]  @relation("UserFollowing")   // PUBLIC users following celebrities
+  followers     Follow[]  @relation("UserFollowers")   // CELEBRITIES being followed
+
+  // Notifications (only for PUBLIC users)
+  notifications Notification[]
+
+  // Add unread notification count for badge
+  unreadNotificationCount Int @default(0)
+
+  @@map("users")
+}
+
+
+model Post {
+  id          String    @id @default(uuid())
+  content     String    @db.Text
+  imageUrl    String?   // Single image for simplicity store to the cloudarny 
+  likesCount  Int       @default(0) // Denormalized for performance
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Author relationship
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId    String
+
+  // Index for efficient pagination
+  @@index([createdAt(sort: Desc)])
+  @@index([authorId, createdAt(sort: Desc)])
+  @@map("posts")
+}
+
+
+model Follow {
+  id          String   @id @default(uuid())
+  userId      String   // PUBLIC user who is following
+  celebrityId String   // CELEBRITY being followed
+  createdAt   DateTime @default(now())
+
+  user        User     @relation("UserFollowing", fields: [userId], references: [id], onDelete: Cascade)
+  celebrity   User     @relation("UserFollowers", fields: [celebrityId], references: [id], onDelete: Cascade)
+
+  // Prevent duplicate follows
+  @@unique([userId, celebrityId])
+  @@index([userId])        // Get all celebrities a user follows
+  @@index([celebrityId])   // Get all followers of a celebrity
+  @@map("follows")
+}
+
+// Notification Model - Only for NEW_POST from followed celebrities
+model Notification {
+  id          String   @id @default(uuid())
+  type        NotificationType @default(NEW_POST)
+  message     String   @db.Text
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  // Recipient (PUBLIC user)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Celebrity who posted & the post
+  celebrityId String   // Who posted
+  postId      String   // Which post
+
+  // Efficient querying for notification feed and badge count
+  @@index([userId, isRead, createdAt(sort: Desc)])
+  @@index([userId, isRead]) // For counting unread notifications
+  @@map("notifications")
+}
