@@ -110,8 +110,8 @@ async function main() {
             }
         }
     }
-    // --- 5. Celebrities Create Posts ---
-    const numPostsPerCelebrity = 5;
+    // --- 5. Celebrities Create Posts (Increased Quantity) ---
+    const numPostsPerCelebrity = 50; // <--- INCREASED THIS FROM 5 TO 50
     for (const celebrity of createdCelebrities) {
         for (let i = 0; i < numPostsPerCelebrity; i++) {
             const postContent = faker_1.faker.lorem.sentence(faker_1.faker.number.int({ min: 10, max: 50 }));
