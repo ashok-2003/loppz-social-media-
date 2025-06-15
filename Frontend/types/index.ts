@@ -6,6 +6,18 @@ export type IconSvgProps = SVGProps<SVGSVGElement> & {
   size?: number;
 };
 
+
+export interface SessionUser {
+  user: {
+    name: string;
+    email: string;
+    image?: null
+    id: string
+    role: UserRole
+    isVerified: false
+  }
+}
+
 // --- Enums ---
 export enum UserRole {
   CELEBRITY = 'CELEBRITY',
