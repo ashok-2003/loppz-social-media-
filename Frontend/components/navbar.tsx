@@ -49,7 +49,7 @@ export const UpperNavbar = () => {
       <NavbarContent className="flex basis-1/5 sm:basis-full" justify="end">
         <NavbarItem className="flex gap-4">
           <ThemeSwitch />
-          <Avatar size="md" showFallback src="https://images.unsplash.com/broken" />
+          <Avatar size="md" showFallback src="https://i.pinimg.com/736x/cd/d9/76/cdd97628928661edc4902fa9d97342c5.jpg" />
         </NavbarItem>
       </NavbarContent>
     </Navbar>
