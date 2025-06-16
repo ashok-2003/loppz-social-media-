@@ -2,17 +2,14 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardHeader, CardBody, CardFooter } from "@heroui/card";
-import { Avatar } from "@heroui/avatar";
 import { Button } from "@heroui/button";
 import { Spinner } from "@heroui/spinner";
-import { Badge } from "@heroui/badge";
-import { Heart, MessageCircle, Share, Users, VerifiedIcon } from "lucide-react";
+import { Heart, Users, VerifiedIcon } from "lucide-react";
 import { Link } from "@heroui/link";
 import Image from 'next/image';
 import { Post } from '@/types';
 import { User } from '@heroui/user';
 
-const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:5000';
 
 
 
