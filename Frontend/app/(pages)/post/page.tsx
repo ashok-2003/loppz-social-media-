@@ -14,7 +14,7 @@ import { addToast } from '@heroui/toast';
 import { Card, CardBody, CardHeader } from '@heroui/card';
 import { Button } from '@heroui/button';
 
-const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:5000';
+const BACKEND_API_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_BACKEND_API_URL;;
 
 export default function CreatePostPage() {
   const { data: session, status } = useSession();

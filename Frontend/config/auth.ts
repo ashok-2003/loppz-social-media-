@@ -68,7 +68,7 @@ export const authOptions: AuthOptions = {
           throw new Error('Email and password are required.');
         }
 
-        const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:5000';
+        const BACKEND_API_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
         try {
           const response = await axios.post(`${BACKEND_API_URL}/auth`, {
