@@ -1,16 +1,10 @@
 import { Link } from "@heroui/link";
-import { Snippet } from "@heroui/snippet";
-import { Code } from "@heroui/code";
-import { button as buttonStyles } from "@heroui/theme";
-
-import { siteConfig } from "@/config/site";
 import { title, subtitle } from "@/components/primitives";
-import { GithubIcon } from "@/config/icons";
 import { authOptions } from "@/config/auth";
 import { getServerSession } from "next-auth";
-import PostsFeed from "@/components/PostsFeed";
 import { SessionUser } from "@/types";
 import { LoginWarn } from "@/components/loginWarn";
+import PostsFeed from "@/components/PostsFeed";
 
 const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:5000';
 
@@ -24,12 +18,12 @@ export default async function Home() {
     <section className="flex flex-col items-center justify-center gap-4 p-4 mt-4">
 
       <div className="justify-center inline-block max-w-2xl text-center">
-          <p className={title({ color: "cyan", size: "md" })}>Social Feed</p>
-          <p className={subtitle({ class: "mt-4" })}>
-            Explore posts from all celebrities.
-          </p>
-        </div>
-      
+        <p className={title({ color: "cyan", size: "md" })}>Social Feed</p>
+        <p className={subtitle({ class: "mt-4" })}>
+          Explore posts from all celebrities.
+        </p>
+      </div>
+
       <div className="w-full max-w-3xl">
         {session && (
           <div className="flex gap-2 p-2 mb-6 rounded-full">
@@ -39,7 +33,6 @@ export default async function Home() {
                 feed
               </Link>
             </p>
-
           </div>
         )}
 
@@ -48,7 +41,7 @@ export default async function Home() {
           <LoginWarn />
         )}
 
-        
+
 
         {/* Universal Posts Feed - All Posts */}
         <PostsFeed url={url} />
