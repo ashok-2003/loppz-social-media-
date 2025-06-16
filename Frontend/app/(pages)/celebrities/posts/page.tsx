@@ -36,9 +36,6 @@ interface ViewPostsResponse {
   data?: {
     celebrity: Celebrity;
     posts: Post[];
-    pagination: {
-      totalPosts: number;
-    };
   };
 }
 
@@ -58,20 +55,12 @@ const ViewPostsPage = () => {
         return;
       }
 
-      // Check if user is celebrity
-      if (session.user.role !== 'CELEBRITY') {
-        setError('Access denied. Only celebrities can view posts.');
-        setLoading(false);
-        return;
-      }
-
       try {
-        // Call your backend directly - replace with your actual backend URL
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
-        const response = await fetch(`${backendUrl}/getPostsByCelebrity/${session.user.id}?limit=50`);
+        const response = await fetch(`${backendUrl}/getPostsByCelebrity/${session.user.id}`);
         
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error(`Server error: ${response.status}`);
         }
         
         const data: ViewPostsResponse = await response.json();
@@ -83,8 +72,8 @@ const ViewPostsPage = () => {
           setError(data.message || 'Failed to fetch posts');
         }
       } catch (err) {
-        setError('Error loading posts');
         console.error('Error fetching posts:', err);
+        setError('Cannot connect to server. Please check if backend is running.');
       } finally {
         setLoading(false);
       }
@@ -126,11 +115,7 @@ const ViewPostsPage = () => {
     <div className="max-w-4xl p-4 mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
-        <Button
-          isIconOnly
-          variant="light"
-          onPress={() => router.back()}
-        >
+        <Button isIconOnly variant="light" onPress={() => router.back()}>
           <ArrowLeft size={20} />
         </Button>
         <h1 className="text-2xl font-bold">My Posts</h1>
@@ -141,11 +126,7 @@ const ViewPostsPage = () => {
         <Card className="mb-6">
           <CardBody>
             <div className="flex items-center gap-4">
-              <Avatar
-                size="lg"
-                src={celebrity.avatarUrl}
-                showFallback
-              />
+              <Avatar size="lg" src={celebrity.avatarUrl} showFallback />
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-semibold">{celebrity.username}</h2>
@@ -179,28 +160,22 @@ const ViewPostsPage = () => {
           {posts.map((post) => (
             <Card key={post.id} className="w-full">
               <CardHeader className="pb-2">
-                <div className="flex items-start justify-between w-full">
-                  <div className="flex items-center gap-3">
-                    <Avatar
-                      size="sm"
-                      src={post.author.avatarUrl}
-                      showFallback
-                    />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-small">
-                          {post.author.username}
-                        </p>
-                        {post.author.isVerified && (
-                          <Chip size="sm" color="primary" variant="flat">
-                            ✓
-                          </Chip>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 text-tiny text-default-400">
-                        <Calendar size={12} />
-                        <span>{formatDate(post.createdAt)}</span>
-                      </div>
+                <div className="flex items-center gap-3">
+                  <Avatar size="sm" src={post.author.avatarUrl} showFallback />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-small">
+                        {post.author.username}
+                      </p>
+                      {post.author.isVerified && (
+                        <Chip size="sm" color="primary" variant="flat">
+                          ✓
+                        </Chip>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 text-tiny text-default-400">
+                      <Calendar size={12} />
+                      <span>{formatDate(post.createdAt)}</span>
                     </div>
                   </div>
                 </div>
@@ -219,7 +194,6 @@ const ViewPostsPage = () => {
                   </div>
                 )}
 
-                {/* Post Actions */}
                 <div className="flex items-center gap-6 pt-2 border-t border-default-200">
                   <Button
                     variant="light"

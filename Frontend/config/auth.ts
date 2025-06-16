@@ -1,8 +1,6 @@
-// social-app-frontend/lib/auth.ts
 import { AuthOptions} from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import axios from 'axios';
-import { JWT } from 'next-auth/jwt';
 
 // --- Define types directly in this file ---
 export enum UserRole {
@@ -63,7 +61,7 @@ export const authOptions: AuthOptions = {
         username: { label: "Username (optional for login, required for signup)", type: "text", placeholder: "Your name" },
         email: { label: "Email", type: "email", placeholder: "your email" },
         password: { label: "Password", type: "password" },
-        role: { label: "Celebrity Role (true for Celebrity)", type: "checkbox" }, // Added for boolean role input
+        role: { label: "Celebrity Role", type: "text" }, // Changed from checkbox to text to handle string values
       },
       async authorize(credentials, req) {
         if (!credentials?.email || !credentials.password) {
@@ -77,7 +75,7 @@ export const authOptions: AuthOptions = {
             email: credentials.email,
             password: credentials.password,
             username: credentials.username,
-            // Conditionally send 'role' only if it exists and convert its type to boolean
+            // Convert string 'true'/'false' to boolean
             ...(credentials.role !== undefined && { role: credentials.role === 'true' }),
           });
 
@@ -120,7 +118,9 @@ export const authOptions: AuthOptions = {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  // pages: { signIn: '/login' } is removed, NextAuth.js will use its default sign-in flow.
+  pages: { 
+    signIn: '/login' // Custom login page
+  },
   callbacks: {
     async jwt({ token, user }) {
       // 'user' parameter here is of type `DefaultUser | AdapterUser | undefined`.
