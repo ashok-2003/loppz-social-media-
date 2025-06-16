@@ -7,7 +7,7 @@ import { Link } from "@heroui/link";
 import { LoginWarn } from "@/components/loginWarn";
 
 
-const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:5000';
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 export default async function FeedPage() {
   const session = await getServerSession(authOptions);
 

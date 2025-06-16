@@ -6,7 +6,7 @@ import { SessionUser } from "@/types";
 import { LoginWarn } from "@/components/loginWarn";
 import PostsFeed from "@/components/PostsFeed";
 
-const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:5000';
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
 export default async function Home() {
   const session: SessionUser | null = await getServerSession(authOptions);

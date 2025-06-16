@@ -13,7 +13,7 @@ import {
 import { LoginWarn } from '@/components/loginWarn';
 import { User } from '@heroui/user';
 
-const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:5000';
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
 interface Celebrity {
   id: string;
