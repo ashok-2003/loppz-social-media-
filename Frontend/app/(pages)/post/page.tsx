@@ -6,63 +6,46 @@ import {
   Send, 
   Star,
   AlertCircle,
-  CheckCircle,
   Upload,
   Camera
 } from "lucide-react";
+import { useSession } from 'next-auth/react';
+import { Textarea } from '@heroui/input';
+import { addToast } from '@heroui/toast';
+import { Card, CardBody, CardHeader } from '@heroui/card';
+import { Button } from '@heroui/button';
+import { Progress } from '@heroui/progress';
 
 const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:5000';
 
-interface User {
-  id: string;
-  username: string;
-  avatarUrl?: string;
-  isVerified: boolean;
-  role: 'CELEBRITY' | 'PUBLIC';
-}
-
 interface CreatePostPageProps {
-  user: User;
   onPostCreated?: (post: any) => void;
 }
 
-// Toast Component
-const Toast = ({ message, type, onClose }: { message: string; type: 'success' | 'error'; onClose: () => void }) => {
-  return (
-    <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
-      type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-    }`}>
-      <div className="flex items-center gap-2">
-        {type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
-        <span>{message}</span>
-        <button onClick={onClose} className="ml-2 hover:opacity-70">
-          <X size={16} />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-export default function CreatePostPage({ user, onPostCreated }: CreatePostPageProps) {
+export default function CreatePostPage({ onPostCreated }: CreatePostPageProps) {
+  const { data: session, status } = useSession();
   const [content, setContent] = useState('');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const maxContentLength = 2000;
   const maxImageSize = 5 * 1024 * 1024; // 5MB
 
-//   const isCelebrity = user.role === 'CELEBRITY';
-const isCelebrity =  'CELEBRITY';
+  // Check if user is celebrity
+  const isCelebrity = session?.user?.role === 'CELEBRITY';
+  const user = session?.user;
 
-  // Show toast message
-  const showToast = (message: string, type: 'success' | 'error') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+  // Show toast message using HeroUI
+  const showToast = (title: string, description: string, color: 'success' | 'danger' = 'success') => {
+    addToast({
+      title,
+      description,
+      color,
+    });
   };
 
   // Handle image selection
@@ -70,13 +53,13 @@ const isCelebrity =  'CELEBRITY';
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > maxImageSize) {
-      showToast('Image size must be less than 5MB', 'error');
+    if (!file.type.startsWith('image/')) {
+      showToast('Invalid File', 'Please select a valid image file', 'danger');
       return;
     }
 
-    if (!file.type.startsWith('image/')) {
-      showToast('Please select a valid image file', 'error');
+    if (file.size > maxImageSize) {
+      showToast('File Too Large', 'Please select an image smaller than 5MB', 'danger');
       return;
     }
 
@@ -89,7 +72,6 @@ const isCelebrity =  'CELEBRITY';
     reader.readAsDataURL(file);
   };
 
-  // Remove selected image
   const removeImage = () => {
     setSelectedImage(null);
     setImagePreview(null);
@@ -138,12 +120,12 @@ const isCelebrity =  'CELEBRITY';
   // Create post
   const handleCreatePost = async () => {
     if (!content.trim()) {
-      showToast('Please write some content for your post', 'error');
+      showToast('Content Required', 'Please write some content for your post', 'danger');
       return;
     }
 
     if (!isCelebrity) {
-      showToast('Only celebrities can create posts', 'error');
+      showToast('Access Denied', 'Only celebrities can create posts', 'danger');
       return;
     }
 
@@ -164,9 +146,9 @@ const isCelebrity =  'CELEBRITY';
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: user.id,
+          userId: user?.id,
           content: content.trim(),
-          imageUrl
+          // imageUrl: imageUrl // Uncomment when ready to include images
         })
       });
 
@@ -177,7 +159,7 @@ const isCelebrity =  'CELEBRITY';
       const data = await response.json();
 
       if (data.success) {
-        showToast('Successfully posted!', 'success');
+        showToast('Success!', 'Your post has been published successfully', 'success');
         
         // Reset form
         setContent('');
@@ -198,7 +180,7 @@ const isCelebrity =  'CELEBRITY';
 
     } catch (err) {
       console.error('Error creating post:', err);
-      showToast(err instanceof Error ? err.message : 'Failed to create post', 'error');
+      showToast('Error', err instanceof Error ? err.message : 'Failed to create post', 'danger');
     } finally {
       setIsCreating(false);
       setIsUploading(false);
@@ -208,83 +190,109 @@ const isCelebrity =  'CELEBRITY';
   const remainingChars = maxContentLength - content.length;
   const isContentValid = content.trim().length > 0 && remainingChars >= 0;
 
+  // Loading state
+  if (status === 'loading') {
+    return (
+      <div className="max-w-2xl p-6 mx-auto">
+        <Card>
+          <CardBody className="p-12 text-center">
+            <div className="w-8 h-8 mx-auto mb-4 border-b-2 rounded-full animate-spin border-foreground"></div>
+            <p className="text-foreground/70">Loading...</p>
+          </CardBody>
+        </Card>
+      </div>
+    );
+  }
+
+  // Not authenticated
+  if (status === 'unauthenticated') {
+    return (
+      <div className="max-w-2xl p-6 mx-auto">
+        <Card>
+          <CardBody className="p-12 text-center">
+            <AlertCircle size={64} className="mx-auto mb-4 text-foreground/50" />
+            <h2 className="mb-2 text-xl font-semibold text-foreground">
+              Authentication Required
+            </h2>
+            <p className="text-foreground/70">
+              Please sign in to create posts.
+            </p>
+          </CardBody>
+        </Card>
+      </div>
+    );
+  }
+
+  // Not a celebrity
   if (!isCelebrity) {
     return (
-      <div className="max-w-2xl mx-auto p-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md text-center p-12">
-          <AlertCircle size={64} className="mx-auto mb-4 text-gray-400" />
-          <h2 className="text-xl font-semibold text-gray-600 mb-2">
-            Celebrity Access Only
-          </h2>
-          <p className="text-gray-500">
-            Only verified celebrities can create posts. 
-            {user.role === 'PUBLIC' && ' Apply for celebrity verification to start posting.'}
-          </p>
-        </div>
+      <div className="max-w-2xl p-6 mx-auto">
+        <Card>
+          <CardBody className="p-12 text-center">
+            <AlertCircle size={64} className="mx-auto mb-4 text-foreground/50" />
+            <h2 className="mb-2 text-xl font-semibold text-foreground">
+              Celebrity Access Only
+            </h2>
+            <p className="text-foreground/70">
+              Only verified celebrities can create posts.
+            </p>
+          </CardBody>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      {/* Toast */}
-      {toast && (
-        <Toast 
-          message={toast.message} 
-          type={toast.type} 
-          onClose={() => setToast(null)} 
-        />
-      )}
-
+    <div className="max-w-2xl p-6 mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+        <h1 className="mb-2 text-3xl font-bold text-transparent bg-gradient-to-r from-primary to-secondary bg-clip-text">
           Create New Post
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-foreground/70">
           Share your thoughts with your followers
         </p>
       </div>
 
       {/* Create Post Form */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md mb-6">
-        {/* <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <Card>
+        <CardHeader className="pb-3">
           <div className="flex items-center gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold">{user.username}</span>
-                {user.isVerified && (
-                  <div className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                <span className="font-semibold text-foreground">{user?.name || user?.username}</span>
+                {user?.isVerified && (
+                  <div className="flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-primary/20 text-primary">
                     <Star size={12} />
                     Verified
                   </div>
                 )}
               </div>
-              <span className="text-sm text-gray-500">Creating a new post</span>
+              <span className="text-sm text-foreground/70">Creating a new post</span>
             </div>
           </div>
-        </div> */}
+        </CardHeader>
 
-        <div className="p-4 space-y-4">
+        <CardBody className="space-y-4">
           {/* Image Upload Section */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <Image size={18} className="text-gray-500" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <Image size={18} className="text-foreground/70" />
+              <span className="text-sm font-medium text-foreground">
                 Add Image (Optional)
               </span>
             </div>
             
             {!imagePreview ? (
               <div 
-                className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-purple-400 transition-colors cursor-pointer"
+                className="p-6 text-center transition-colors border-2 border-dashed rounded-lg cursor-pointer border-foreground/30 hover:border-primary"
                 onClick={() => fileInputRef.current?.click()}
               >
-                <Camera size={32} className="mx-auto mb-2 text-gray-400" />
-                <p className="text-sm text-gray-500 mb-1">
+                <Camera size={32} className="mx-auto mb-2 text-foreground/50" />
+                <p className="mb-1 text-sm text-foreground/70">
                   Click to upload an image
                 </p>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-foreground/50">
                   PNG, JPG, GIF up to 5MB
                 </p>
                 <input
@@ -300,14 +308,17 @@ const isCelebrity =  'CELEBRITY';
                 <img
                   src={imagePreview}
                   alt="Preview"
-                  className="w-full max-h-64 object-cover rounded-lg"
+                  className="object-cover w-full rounded-lg max-h-64"
                 />
-                <button
-                  className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                <Button
+                  isIconOnly
+                  size="sm"
+                  color="danger"
+                  className="absolute top-2 right-2"
                   onClick={removeImage}
                 >
                   <X size={16} />
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -315,43 +326,42 @@ const isCelebrity =  'CELEBRITY';
           {/* Text Content */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="text-sm font-medium text-foreground">
                 What's on your mind?
               </label>
-              <span className={`text-xs ${remainingChars < 100 ? 'text-red-500' : 'text-gray-500'}`}>
+              <span className={`text-xs ${remainingChars < 100 ? 'text-danger' : 'text-foreground/50'}`}>
                 {remainingChars} characters remaining
               </span>
             </div>
             
-            <textarea
+            <Textarea
               placeholder="Share your thoughts, updates, or anything you'd like your followers to see..."
               value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={4}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              onChange={(e : any) => setContent(e.target.value)}
+              minRows={4}
+              maxRows={6}
+              maxLength={maxContentLength}
             />
           </div>
 
           {/* Upload Progress */}
           {isUploading && (
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-foreground/70">
                 <Upload size={16} />
                 <span>Uploading image...</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-purple-600 h-2 rounded-full transition-all duration-300" 
-                  style={{ width: `${uploadProgress}%` }}
-                ></div>
-              </div>
+              <Progress
+                value={uploadProgress}
+                color="primary"
+                className="max-w-md"
+              />
             </div>
           )}
-        </div>
 
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex justify-between items-center">
-            <div className="text-sm text-gray-500">
+          {/* Action Buttons */}
+          <div className="flex items-center justify-between pt-4 border-t border-foreground/20">
+            <div className="text-sm text-foreground/70">
               {selectedImage && (
                 <span className="flex items-center gap-1">
                   <Image size={14} />
@@ -360,30 +370,18 @@ const isCelebrity =  'CELEBRITY';
               )}
             </div>
             
-            <button
+            <Button
+              color="primary"
               onClick={handleCreatePost}
-              disabled={!isContentValid || isCreating || isUploading}
-              className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              isDisabled={!isContentValid || isCreating || isUploading}
+              isLoading={isCreating || isUploading}
+              startContent={!isCreating && !isUploading ? <Send size={18} /> : undefined}
             >
-              {!isCreating && !isUploading && <Send size={18} />}
               {isCreating ? 'Publishing...' : isUploading ? 'Uploading...' : 'Publish Post'}
-            </button>
+            </Button>
           </div>
-        </div>
-      </div>
-
-      {/* Guidelines */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 rounded-lg p-4">
-        <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">
-          Posting Guidelines
-        </h3>
-        <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
-          <li>• Keep content respectful and appropriate</li>
-          <li>• Image uploads are limited to 5MB</li>
-          <li>• Posts cannot exceed {maxContentLength.toLocaleString()} characters</li>
-          <li>• Only verified celebrities can create posts</li>
-        </ul>
-      </div>
+        </CardBody>
+      </Card>
     </div>
   );
 }

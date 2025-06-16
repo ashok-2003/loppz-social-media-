@@ -2,15 +2,12 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { Card, CardHeader, CardBody, CardFooter } from "@heroui/card";
-import { Avatar } from "@heroui/avatar";
 import { Button } from "@heroui/button";
 import { Spinner } from "@heroui/spinner";
-import { Badge } from "@heroui/badge";
 import {
   Users,
   UserPlus,
   UserCheck,
-  Star,
   VerifiedIcon
 } from "lucide-react";
 import { LoginWarn } from '@/components/loginWarn';
