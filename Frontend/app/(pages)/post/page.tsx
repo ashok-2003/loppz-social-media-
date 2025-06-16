@@ -6,7 +6,6 @@ import {
   Send, 
   Star,
   AlertCircle,
-  Upload,
   Camera
 } from "lucide-react";
 import { useSession } from 'next-auth/react';
@@ -14,22 +13,15 @@ import { Textarea } from '@heroui/input';
 import { addToast } from '@heroui/toast';
 import { Card, CardBody, CardHeader } from '@heroui/card';
 import { Button } from '@heroui/button';
-import { Progress } from '@heroui/progress';
 
 const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:5000';
 
-interface CreatePostPageProps {
-  onPostCreated?: (post: any) => void;
-}
-
-export default function CreatePostPage({ onPostCreated }: CreatePostPageProps) {
+export default function CreatePostPage() {
   const { data: session, status } = useSession();
   const [content, setContent] = useState('');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const maxContentLength = 2000;
@@ -48,7 +40,7 @@ export default function CreatePostPage({ onPostCreated }: CreatePostPageProps) {
     });
   };
 
-  // Handle image selection
+  // Handle image selection (frontend only for now)
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -80,44 +72,7 @@ export default function CreatePostPage({ onPostCreated }: CreatePostPageProps) {
     }
   };
 
-  // Upload image to server
-  const uploadImage = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append('image', file);
-
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      
-      xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable) {
-          const progress = (e.loaded / e.total) * 100;
-          setUploadProgress(progress);
-        }
-      });
-
-      xhr.addEventListener('load', () => {
-        if (xhr.status === 200) {
-          const response = JSON.parse(xhr.responseText);
-          if (response.success) {
-            resolve(response.data.imageUrl);
-          } else {
-            reject(new Error(response.message || 'Upload failed'));
-          }
-        } else {
-          reject(new Error('Upload failed'));
-        }
-      });
-
-      xhr.addEventListener('error', () => {
-        reject(new Error('Upload failed'));
-      });
-
-      xhr.open('POST', `${BACKEND_API_URL}/uploadImage`);
-      xhr.send(formData);
-    });
-  };
-
-  // Create post
+  // Create post (text only for now)
   const handleCreatePost = async () => {
     if (!content.trim()) {
       showToast('Content Required', 'Please write some content for your post', 'danger');
@@ -132,14 +87,8 @@ export default function CreatePostPage({ onPostCreated }: CreatePostPageProps) {
     setIsCreating(true);
 
     try {
-      let imageUrl = null;
-      
-      if (selectedImage) {
-        setIsUploading(true);
-        imageUrl = await uploadImage(selectedImage);
-        setIsUploading(false);
-      }
-
+      // Only sending text content for now
+      // Image upload logic will be added later
       const response = await fetch(`${BACKEND_API_URL}/createPost`, {
         method: 'POST',
         headers: {
@@ -148,7 +97,7 @@ export default function CreatePostPage({ onPostCreated }: CreatePostPageProps) {
         body: JSON.stringify({
           userId: user?.id,
           content: content.trim(),
-          // imageUrl: imageUrl // Uncomment when ready to include images
+          // imageUrl will be added later when backend supports it
         })
       });
 
@@ -165,13 +114,8 @@ export default function CreatePostPage({ onPostCreated }: CreatePostPageProps) {
         setContent('');
         setSelectedImage(null);
         setImagePreview(null);
-        setUploadProgress(0);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
-        }
-
-        if (onPostCreated) {
-          onPostCreated(data.data.post);
         }
         
       } else {
@@ -183,7 +127,6 @@ export default function CreatePostPage({ onPostCreated }: CreatePostPageProps) {
       showToast('Error', err instanceof Error ? err.message : 'Failed to create post', 'danger');
     } finally {
       setIsCreating(false);
-      setIsUploading(false);
     }
   };
 
@@ -274,12 +217,12 @@ export default function CreatePostPage({ onPostCreated }: CreatePostPageProps) {
         </CardHeader>
 
         <CardBody className="space-y-4">
-          {/* Image Upload Section */}
+          {/* Image Upload Section - Frontend only for now */}
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Image size={18} className="text-foreground/70" />
               <span className="text-sm font-medium text-foreground">
-                Add Image (Optional)
+                Add Image (Coming Soon)
               </span>
             </div>
             
@@ -290,10 +233,10 @@ export default function CreatePostPage({ onPostCreated }: CreatePostPageProps) {
               >
                 <Camera size={32} className="mx-auto mb-2 text-foreground/50" />
                 <p className="mb-1 text-sm text-foreground/70">
-                  Click to upload an image
+                  Click to select an image (preview only)
                 </p>
                 <p className="text-xs text-foreground/50">
-                  PNG, JPG, GIF up to 5MB
+                  PNG, JPG, GIF up to 5MB - Upload feature coming soon
                 </p>
                 <input
                   ref={fileInputRef}
@@ -315,10 +258,13 @@ export default function CreatePostPage({ onPostCreated }: CreatePostPageProps) {
                   size="sm"
                   color="danger"
                   className="absolute top-2 right-2"
-                  onClick={removeImage}
+                  onPress={removeImage}
                 >
                   <X size={16} />
                 </Button>
+                <div className="absolute px-2 py-1 text-xs rounded bottom-2 left-2 bg-warning/90 text-warning-foreground">
+                  Preview only - Upload coming soon
+                </div>
               </div>
             )}
           </div>
@@ -337,47 +283,32 @@ export default function CreatePostPage({ onPostCreated }: CreatePostPageProps) {
             <Textarea
               placeholder="Share your thoughts, updates, or anything you'd like your followers to see..."
               value={content}
-              onChange={(e : any) => setContent(e.target.value)}
+              onChange={(e: any) => setContent(e.target.value)}
               minRows={4}
               maxRows={6}
               maxLength={maxContentLength}
             />
           </div>
 
-          {/* Upload Progress */}
-          {isUploading && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-foreground/70">
-                <Upload size={16} />
-                <span>Uploading image...</span>
-              </div>
-              <Progress
-                value={uploadProgress}
-                color="primary"
-                className="max-w-md"
-              />
-            </div>
-          )}
-
           {/* Action Buttons */}
           <div className="flex items-center justify-between pt-4 border-t border-foreground/20">
             <div className="text-sm text-foreground/70">
               {selectedImage && (
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1 text-warning">
                   <Image size={14} />
-                  Image attached
+                  Image selected (preview only)
                 </span>
               )}
             </div>
             
             <Button
               color="primary"
-              onClick={handleCreatePost}
-              isDisabled={!isContentValid || isCreating || isUploading}
-              isLoading={isCreating || isUploading}
-              startContent={!isCreating && !isUploading ? <Send size={18} /> : undefined}
+              onPress={handleCreatePost}
+              isDisabled={!isContentValid || isCreating}
+              isLoading={isCreating}
+              startContent={!isCreating ? <Send size={18} /> : undefined}
             >
-              {isCreating ? 'Publishing...' : isUploading ? 'Uploading...' : 'Publish Post'}
+              {isCreating ? 'Publishing...' : 'Publish Post'}
             </Button>
           </div>
         </CardBody>
