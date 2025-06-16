@@ -16,7 +16,7 @@ const allowedOrigins = [
   'https://loppz-git-master-ashokgupta2678-gmailcoms-projects.vercel.app/',
   'https://loppz-ashokgupta2678-gmailcoms-projects.vercel.app/',
   'https://loppz.vercel.app/',
-  // Add your custom domain here if you have one, e.g., 'https://www.your-app.com'
+  'https://social-frontend-demo.vercel.app/',
 ];
 
 const corsOptions = {
