@@ -89,85 +89,59 @@ app.post('/auth', async (req, res) => {
         }
     }
     catch (error) {
-        // Catch any database or unexpected errors
         console.error('Backend: Error in auth route:', error);
         return res.status(500).json({ message: 'Internal server error during authentication.' });
     }
 });
 app.get('/getAll', async (req, res) => {
     try {
-        // Extract pagination parameters from query
-        const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10; // Default 10 posts per page
         const cursor = req.query.cursor; // For cursor-based pagination (optional)
-        // Calculate offset for page-based pagination
-        const offset = (page - 1) * limit;
         let posts;
         let hasMore = false;
-        if (cursor) {
-            // Cursor-based pagination (More efficient for infinite scroll)
-            posts = await prisma.post.findMany({
-                where: {
-                    createdAt: {
-                        lt: new Date(cursor) // Get posts older than cursor
-                    }
-                },
-                include: {
-                    author: {
-                        select: {
-                            id: true,
-                            username: true,
-                            avatarUrl: true,
-                            isVerified: true,
-                            role: true
-                        }
-                    }
-                },
-                orderBy: {
-                    createdAt: 'desc'
-                },
-                take: limit + 1 // Take one extra to check if there are more
-            });
-            // Check if there are more posts
-            hasMore = posts.length > limit;
-            if (hasMore) {
-                posts = posts.slice(0, limit); // Remove the extra post
+        // Build the where clause conditionally
+        const whereClause = {};
+        // Only add cursor filter if cursor is provided and valid
+        if (cursor && cursor.trim() !== '') {
+            const cursorDate = new Date(cursor);
+            // Check if the date is valid
+            if (!isNaN(cursorDate.getTime())) {
+                whereClause.createdAt = {
+                    lt: cursorDate
+                };
             }
         }
-        else {
-            // Offset-based pagination (Simpler but less efficient for large datasets)
-            const [posts_data, totalCount] = await Promise.all([
-                prisma.post.findMany({
-                    include: {
-                        author: {
-                            select: {
-                                id: true,
-                                username: true,
-                                avatarUrl: true,
-                                isVerified: true,
-                                role: true
-                            }
-                        }
-                    },
-                    orderBy: {
-                        createdAt: 'desc'
-                    },
-                    skip: offset,
-                    take: limit
-                }),
-                prisma.post.count() // Get total count for pagination info
-            ]);
-            posts = posts_data;
-            hasMore = offset + limit < totalCount;
+        // Cursor-based pagination (More efficient for infinite scroll)
+        posts = await prisma.post.findMany({
+            where: whereClause,
+            include: {
+                author: {
+                    select: {
+                        id: true,
+                        username: true,
+                        avatarUrl: true,
+                        isVerified: true,
+                        role: true
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            },
+            take: limit + 1 // Take one extra to check if there are more
+        });
+        // Check if there are more posts
+        hasMore = posts.length > limit;
+        if (hasMore) {
+            posts = posts.slice(0, limit);
         }
-        // Get the cursor for next page (last post's createdAt)
+        // The next cursor is the createdAt timestamp of the very last post in the current batch
         const nextCursor = posts.length > 0 ? posts[posts.length - 1].createdAt.toISOString() : null;
         res.json({
             success: true,
             data: {
                 posts,
                 pagination: {
-                    currentPage: page,
                     limit,
                     hasMore,
                     nextCursor,
@@ -189,7 +163,6 @@ app.get('/getAll', async (req, res) => {
 app.get('/getFeed/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
-        const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const cursor = req.query.cursor;
         // First, get the celebrities this user follows
@@ -204,7 +177,6 @@ app.get('/getFeed/:userId', async (req, res) => {
                 data: {
                     posts: [],
                     pagination: {
-                        currentPage: page,
                         limit,
                         hasMore: false,
                         nextCursor: null,
@@ -215,75 +187,44 @@ app.get('/getFeed/:userId', async (req, res) => {
         }
         let posts;
         let hasMore = false;
-        if (cursor) {
-            // Cursor-based pagination for feed
-            posts = await prisma.post.findMany({
-                where: {
-                    authorId: {
-                        in: celebrityIds
-                    },
-                    createdAt: {
-                        lt: new Date(cursor)
-                    }
-                },
-                include: {
-                    author: {
-                        select: {
-                            id: true,
-                            username: true,
-                            avatarUrl: true,
-                            isVerified: true,
-                            role: true
-                        }
-                    }
-                },
-                orderBy: {
-                    createdAt: 'desc'
-                },
-                take: limit + 1
-            });
-            hasMore = posts.length > limit;
-            if (hasMore) {
-                posts = posts.slice(0, limit);
+        // Build the where clause conditionally
+        const whereClause = {
+            authorId: {
+                in: celebrityIds
+            }
+        };
+        // Only add cursor filter if cursor is provided and valid
+        if (cursor && cursor.trim() !== '') {
+            const cursorDate = new Date(cursor);
+            // Check if the date is valid
+            if (!isNaN(cursorDate.getTime())) {
+                whereClause.createdAt = {
+                    lt: cursorDate
+                };
             }
         }
-        else {
-            // Offset-based pagination for feed
-            const offset = (page - 1) * limit;
-            const [posts_data, totalCount] = await Promise.all([
-                prisma.post.findMany({
-                    where: {
-                        authorId: {
-                            in: celebrityIds
-                        }
-                    },
-                    include: {
-                        author: {
-                            select: {
-                                id: true,
-                                username: true,
-                                avatarUrl: true,
-                                isVerified: true,
-                                role: true
-                            }
-                        }
-                    },
-                    orderBy: {
-                        createdAt: 'desc'
-                    },
-                    skip: offset,
-                    take: limit
-                }),
-                prisma.post.count({
-                    where: {
-                        authorId: {
-                            in: celebrityIds
-                        }
+        // Cursor-based pagination for feed
+        posts = await prisma.post.findMany({
+            where: whereClause,
+            include: {
+                author: {
+                    select: {
+                        id: true,
+                        username: true,
+                        avatarUrl: true,
+                        isVerified: true,
+                        role: true
                     }
-                })
-            ]);
-            posts = posts_data;
-            hasMore = offset + limit < totalCount;
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            },
+            take: limit + 1
+        });
+        hasMore = posts.length > limit;
+        if (hasMore) {
+            posts = posts.slice(0, limit);
         }
         const nextCursor = posts.length > 0 ? posts[posts.length - 1].createdAt.toISOString() : null;
         res.json({
@@ -291,7 +232,6 @@ app.get('/getFeed/:userId', async (req, res) => {
             data: {
                 posts,
                 pagination: {
-                    currentPage: page,
                     limit,
                     hasMore,
                     nextCursor,
@@ -309,294 +249,6 @@ app.get('/getFeed/:userId', async (req, res) => {
         });
     }
 });
-// // Get all celebrities endpoint - No pagination, fetch all at once
-// app.get('/getCelebrities', async (req: Request, res: Response) => {
-//   try {
-//     const search = req.query.search as string;
-//     const sortBy = req.query.sortBy as string || 'username'; // username, followers, posts, createdAt
-//     const sortOrder = req.query.sortOrder as string || 'asc'; // asc, desc
-//     const verified = req.query.verified as string; // true, false, or undefined for all
-//     const userId = req.query.userId as string; // Optional: to include follow status
-//     // Build where clause
-//     const whereClause: any = {
-//       role: 'CELEBRITY'
-//     };
-//     // Add search filter
-//     if (search) {
-//       whereClause.OR = [
-//         {
-//           username: {
-//             contains: search,
-//             mode: 'insensitive'
-//           }
-//         },
-//         {
-//           email: {
-//             contains: search,
-//             mode: 'insensitive'
-//           }
-//         }
-//       ];
-//     }
-//     // Add verified filter
-//     if (verified !== undefined) {
-//       whereClause.isVerified = verified === 'true';
-//     }
-//     // Get user's followed celebrities if userId is provided
-//     let followedCelebrityIds: string[] = [];
-//     if (userId) {
-//       const followedCelebrities = await prisma.follow.findMany({
-//         where: { userId },
-//         select: { celebrityId: true }
-//       });
-//       followedCelebrityIds = followedCelebrities.map(f => f.celebrityId);
-//     }
-//     // Fetch all celebrities at once
-//     const celebrities = await prisma.user.findMany({
-//       where: whereClause,
-//       select: {
-//         id: true,
-//         username: true,
-//         email: true,
-//         avatarUrl: true,
-//         isVerified: true,
-//         role: true,
-//         createdAt: true,
-//         _count: {
-//           select: {
-//             posts: true,
-//             followers: true,
-//             following: true
-//           }
-//         }
-//       },
-//       orderBy: {
-//         [sortBy]: sortOrder as 'asc' | 'desc'
-//       }
-//     });
-//     // Add follow status to each celebrity if userId is provided
-//     const celebritiesWithFollowStatus = celebrities.map((celebrity: any) => ({
-//       ...celebrity,
-//       isFollowed: userId ? followedCelebrityIds.includes(celebrity.id) : undefined,
-//       followersCount: celebrity._count.followers,
-//       followingCount: celebrity._count.following,
-//       postsCount: celebrity._count.posts
-//     }));
-//     // Remove _count from response
-//     celebritiesWithFollowStatus.forEach((celebrity: any) => {
-//       delete celebrity._count;
-//     });
-//     res.json({
-//       success: true,
-//       data: {
-//         celebrities: celebritiesWithFollowStatus,
-//         totalCelebrities: celebrities.length,
-//         filters: {
-//           search: search || null,
-//           sortBy,
-//           sortOrder,
-//           verified: verified || null
-//         }
-//       }
-//     });
-//   } catch (error) {
-//     console.error('Error fetching celebrities:', error);
-//     res.status(500).json({
-//       success: false,
-//       message: 'Failed to fetch celebrities',
-//       error: error
-//     });
-//   }
-// });
-// // Get celebrity by ID with detailed info
-// app.get('/getCelebrity/:celebrityId', async (req: Request, res: Response) => {
-//   try {
-//     const { celebrityId } = req.params;
-//     const userId = req.query.userId as string; // Optional: to include follow status
-//     const celebrity = await prisma.user.findUnique({
-//       where: {
-//         id: celebrityId,
-//         role: 'CELEBRITY'
-//       },
-//       select: {
-//         id: true,
-//         username: true,
-//         email: true,
-//         avatarUrl: true,
-//         isVerified: true,
-//         role: true,
-//         createdAt: true,
-//         bio: true, // Assuming you have a bio field
-//         _count: {
-//           select: {
-//             posts: true,
-//             followers: true,
-//             following: true
-//           }
-//         }
-//       }
-//     });
-//     if (!celebrity) {
-//       return res.status(404).json({
-//         success: false,
-//         message: 'Celebrity not found'
-//       });
-//     }
-//     // Check if user follows this celebrity
-//     let isFollowed = false;
-//     if (userId) {
-//       const followRecord = await prisma.follow.findUnique({
-//         where: {
-//           userId_celebrityId: {
-//             userId,
-//             celebrityId
-//           }
-//         }
-//       });
-//       isFollowed = !!followRecord;
-//     }
-//     // Get recent posts
-//     const recentPosts = await prisma.post.findMany({
-//       where: {
-//         authorId: celebrityId
-//       },
-//       include: {
-//         author: {
-//           select: {
-//             id: true,
-//             username: true,
-//             avatarUrl: true,
-//             isVerified: true,
-//             role: true
-//           }
-//         }
-//       },
-//       orderBy: {
-//         createdAt: 'desc'
-//       },
-//       take: 5
-//     });
-//     const celebrityData = {
-//       ...celebrity,
-//       isFollowed: userId ? isFollowed : undefined,
-//       followersCount: celebrity._count.followers,
-//       followingCount: celebrity._count.following,
-//       postsCount: celebrity._count.posts,
-//       recentPosts
-//     };
-//     // Remove _count from response
-//     delete (celebrityData as any)._count;
-//     res.json({
-//       success: true,
-//       data: {
-//         celebrity: celebrityData
-//       }
-//     });
-//   } catch (error) {
-//     console.error('Error fetching celebrity:', error);
-//     res.status(500).json({
-//       success: false,
-//       message: 'Failed to fetch celebrity',
-//       error: error
-//     });
-//   }
-// });
-// // Follow/Unfollow celebrity endpoint
-// app.post('/followCelebrity', async (req: Request, res: Response) => {
-//   try {
-//     const { userId, celebrityId } = req.body;
-//     if (!userId || !celebrityId) {
-//       return res.status(400).json({
-//         success: false,
-//         message: 'UserId and celebrityId are required'
-//       });
-//     }
-//     // Check if celebrity exists and is actually a celebrity
-//     const celebrity = await prisma.user.findUnique({
-//       where: {
-//         id: celebrityId,
-//         role: 'CELEBRITY'
-//       }
-//     });
-//     if (!celebrity) {
-//       return res.status(404).json({
-//         success: false,
-//         message: 'Celebrity not found'
-//       });
-//     }
-//     // Check if user exists
-//     const user = await prisma.user.findUnique({
-//       where: {
-//         id: userId
-//       }
-//     });
-//     if (!user) {
-//       return res.status(404).json({
-//         success: false,
-//         message: 'User not found'
-//       });
-//     }
-//     // Check if already following
-//     const existingFollow = await prisma.follow.findUnique({
-//       where: {
-//         userId_celebrityId: {
-//           userId,
-//           celebrityId
-//         }
-//       }
-//     });
-//     let action = '';
-//     let followRecord;
-//     if (existingFollow) {
-//       // Unfollow
-//       await prisma.follow.delete({
-//         where: {
-//           userId_celebrityId: {
-//             userId,
-//             celebrityId
-//           }
-//         }
-//       });
-//       action = 'unfollowed';
-//       followRecord = null;
-//     } else {
-//       // Follow
-//       followRecord = await prisma.follow.create({
-//         data: {
-//           userId,
-//           celebrityId
-//         }
-//       });
-//       action = 'followed';
-//     }
-//     // Get updated follower count
-//     const followerCount = await prisma.follow.count({
-//       where: {
-//         celebrityId
-//       }
-//     });
-//     res.json({
-//       success: true,
-//       data: {
-//         action,
-//         isFollowing: !!followRecord,
-//         followerCount,
-//         celebrity: {
-//           id: celebrity.id,
-//           username: celebrity.username
-//         }
-//       },
-//       message: `Successfully ${action} ${celebrity.username}`
-//     });
-//   } catch (error) {
-//     console.error('Error following/unfollowing celebrity:', error);
-//     res.status(500).json({
-//       success: false,
-//       message: 'Failed to follow/unfollow celebrity',
-//       error: error
-//     });
-//   }
-// });
 // Fixed /getCelebrities endpoint
 app.get('/getCelebrities', async (req, res) => {
     try {
