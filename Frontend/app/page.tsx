@@ -17,6 +17,8 @@ const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://local
 export default async function Home() {
   const session: SessionUser | null = await getServerSession(authOptions);
   console.log(session);
+  const endpoint = '/getAll';
+  const url = `${BACKEND_API_URL}${endpoint}`;
 
   return (
     <section className="flex flex-col items-center justify-center gap-4 p-4 mt-4">
@@ -28,7 +30,7 @@ export default async function Home() {
           </p>
         </div>
       
-      <div className="w-full max-w-2xl">
+      <div className="w-full max-w-3xl">
         {session && (
           <div className="flex gap-2 p-2 mb-6 rounded-full">
             <p> Hey {session.user.name}, see your</p>
@@ -49,7 +51,7 @@ export default async function Home() {
         
 
         {/* Universal Posts Feed - All Posts */}
-        <PostsFeed />
+        <PostsFeed url={url} />
       </div>
     </section>
   );

@@ -60,10 +60,6 @@ export interface Post {
   likesCount: number;
   createdAt: string;
   updatedAt: string;
-  authorId: string;
-
-  // Assuming your API will often embed a simplified author object
-  // directly within the post for display purposes.
   author: {
     id: string;
     username: string;
