@@ -9,7 +9,32 @@ import { PrismaClient, UserRole } from '@prisma/client';
 
 const express = require('express');
 const app = express();
-app.use(cors());
+
+
+const allowedOrigins = [
+  'http://localhost:3000', // For local development
+  'https://loppz-git-master-ashokgupta2678-gmailcoms-projects.vercel.app/',
+  'https://loppz-ashokgupta2678-gmailcoms-projects.vercel.app/',
+  'https://loppz.vercel.app/',
+  // Add your custom domain here if you have one, e.g., 'https://www.your-app.com'
+];
+
+const corsOptions = {
+  origin: function (origin : any, callback: any) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 const PORT = process.env.PORT || 5000;
 const prisma = new PrismaClient();
