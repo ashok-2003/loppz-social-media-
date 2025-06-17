@@ -54,7 +54,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="flex items-center justify-center px-4 py-12">
+        <div className="flex flex-col items-center justify-center gap-4 px-4 py-12">
             <div className="w-full max-w-md">
                 <Card className="w-full">
                     <CardHeader className="flex flex-col gap-3 pb-6">
@@ -126,6 +126,33 @@ export default function LoginPage() {
                         </form>
                     </CardBody>
                 </Card>
+            </div>
+            <div>
+               want dummy account ?  
+            </div>
+            <div className='flex flex-row gap-4'>
+                <Button
+                    color='success'
+                    onPress={() => {
+                        setUsername("Consuelo38");
+                        setEmail("kylee29@hotmail.com");
+                        setPassword("publicpassword");
+                        setIsCelebrity(false);
+                    }}
+                >
+                    Public user
+                </Button>
+                <Button 
+                    color='success'
+                    onPress={() => {
+                        setUsername("ElonMusk");
+                        setEmail("elon@example.com");
+                        setPassword("password123");
+                        setIsCelebrity(true);
+                    }}
+                >
+                    Celebritie User
+                </Button>
             </div>
         </div>
     );
