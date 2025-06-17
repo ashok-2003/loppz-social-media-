@@ -14,8 +14,11 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:3000', // For local development
   'https://loppz-git-master-ashokgupta2678-gmailcoms-projects.vercel.app/',
+  'https://loppz-git-master-ashokgupta2678-gmailcoms-projects.vercel.app',
   'https://loppz-ashokgupta2678-gmailcoms-projects.vercel.app/',
+  'https://loppz-ashokgupta2678-gmailcoms-projects.vercel.app',
   'https://loppz.vercel.app/',
+  'https://loppz.vercel.app',
   'https://social-frontend-demo.vercel.app/',
   'https://social-frontend-demo-ashokgupta2678-gmailcoms-projects.vercel.app/',
   'https://social-frontend-de-git-ae259d-ashokgupta2678-gmailcoms-projects.vercel.app/',
